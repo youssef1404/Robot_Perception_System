@@ -1,0 +1,6 @@
+perception_stack_ws/build
+perception_stack_ws/install
+perception_stack_ws/log
+.vscode/
+perception_stack_ws/src/.vscode
+**/__pycache__/
