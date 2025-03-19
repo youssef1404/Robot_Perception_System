@@ -5,9 +5,10 @@ from rclpy.node import Node
 import cv2 as cv
 import torch
 import numpy as np
+import random, sys, os
 from cv_bridge import CvBridge
 from sensor_msgs.msg import Image
-import random, sys, os
+from perception_interfaces.msg import TrackedObject
 
 from ultralytics import YOLO
 sys.path.append("src/perception/perception/")
