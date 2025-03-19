@@ -20,6 +20,7 @@ class ObjectTracker(Node):
         self.subscription = self.create_subscription(
             Image, '/frames', self.image_callback, 10
         )
+        self.publisher = self.create_publisher(TrackedObject, "/tracked_objects", 10)
         self.bridge = CvBridge()
 
         self.yolo_model = YOLO('artifacts/yolov5nu.pt')
@@ -34,6 +35,8 @@ class ObjectTracker(Node):
         frame = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
 
         results = self.yolo_model(frame) # return a list of ultralytics.engine.results.Results objects (one per image)
+
+        tracked_objects = []
 
         for result in results:
             detections = []
@@ -55,35 +58,39 @@ class ObjectTracker(Node):
                 track_id = track.track_id
                 class_name = track.class_name if track.class_name else "Unknown"
 
+                # Create and populate a TrackedObject message
+                tracked_obj = TrackedObject()
+                tracked_obj.track_id = track_id
+                tracked_obj.class_name = class_name
+                tracked_obj.bbox = [float(x1), float(y1), float(x2), float(y2)]
+                tracked_objects.append(tracked_obj)
+
                 # Draw rectangle
                 color = self.colors[track_id % len(self.colors)]
                 cv.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), color, 3)
 
+                # Draw label with track ID and class name
                 label = f"ID {track_id}: {class_name}"
                 cv.putText(frame, label, (int(x1), int(y1) - 10), cv.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+
+
+        # Publish each tracked object individually
+        for obj in tracked_objects:
+            self.publisher.publish(obj)
+            self.get_logger().info(f"Published ID: {obj.track_id} class_name: {obj.class_name} bbox data: {obj.bbox}")
+        self.get_logger().info(f"Published {len(tracked_objects)} tracked objects")
 
         cv.imshow("Tracked Objects", frame)
         cv.waitKey(1)
 
 
-    def destroy_node(self):
-        """Clean up resources when the node is destroyed."""
-        super().destroy_node()
-        if self.video_writer is not None:
-            self.video_writer.release()
-            self.get_logger().info(f"Video writer released. Output saved to {self.video_out_source}")
-        cv.destroyAllWindows()
-
 def main(args=None):
     rclpy.init(args=args)
     node = ObjectTracker()
-    try:
-        rclpy.spin(node)
-    except KeyboardInterrupt:
-        pass
-    finally:
-        node.destroy_node()
-        rclpy.shutdown()
+    rclpy.spin(node)
+    node.destroy_node()
+    rclpy.shutdown()
+    cv.destroyAllWindows()
 
 if __name__ == '__main__':
     main()
