@@ -4,6 +4,7 @@ import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
 from perception_interfaces.msg import TrackedObject
+from std_msgs.msg import Float32  # Import Float32 for publishing speed
 from cv_bridge import CvBridge
 import cv2
 import numpy as np
@@ -23,6 +24,9 @@ class OpticalFlowTracker(Node):
         self.tracked_objects_subscriber = self.create_subscription(
             TrackedObject, '/tracked_objects', self.tracked_object_callback, 10
         )
+
+        # Speed Publisher
+        self.speed_publisher = self.create_publisher(Float32, '/estimated_speed', 10)
 
         self.tracked_objects = {}  # Store objects with a history of positions
         self.previous_gray = None
@@ -104,6 +108,11 @@ class OpticalFlowTracker(Node):
                             speed_mps = (displacement * self.meters_per_pixel) / time_diff  # Speed in m/s
                             speed_kph = speed_mps * 3.6  # Convert to km/h
                             self.get_logger().info(f"Object {obj_id} speed: {speed_kph:.2f} km/h")
+
+                            # Publish speed value
+                            speed_msg = Float32()
+                            speed_msg.data = speed_kph
+                            self.speed_publisher.publish(speed_msg)
 
                             # Display speed on image
                             speed_text = f"{speed_kph:.2f} km/h"

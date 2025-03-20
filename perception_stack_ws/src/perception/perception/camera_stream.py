@@ -13,7 +13,7 @@ class VideoPublisher(Node):
         self.publisher_ = self.create_publisher(Image, '/frames', 10)
         self.bridge = CvBridge()
         
-        self.video_source = "/home/hunter/Speed_ws/src/optical_flow/challenge.mp4"
+        self.video_source = "/home/hunter/Robot_Perception_System/perception_stack_ws/src/perception/perception/data/optical_flow.mp4"
         # self.video_source = os.path.abspath(os.path.join("data", "people.mp4"))        
         self.cap = cv2.VideoCapture(self.video_source)
 
