@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 import os
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "artifacts/mars-small128.pb")
+
 import sys
 import random
 import logging

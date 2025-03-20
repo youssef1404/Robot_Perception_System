@@ -20,8 +20,9 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'cam_publisher = perception.camera_stream:main',
-            'tracker = perception.tracking:main'
+        'cam_publisher = perception.camera_stream:main',
+        'tracker = perception.tracking:main',
+        'speed = perception.speed:main',
         ],
     },
 )

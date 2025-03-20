@@ -7,6 +7,8 @@ from perception.deep_sort.deep_sort import nn_matching
 from perception.deep_sort.deep_sort.detection import Detection
 import numpy as np
 import os
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "artifacts/mars-small128.pb")
+
 
 
 class Tracker:
@@ -20,7 +22,9 @@ class Tracker:
         nn_budget = None
 
         ## Loads the feature extraction model (mars-small128.pb), which is used to encode object appearances.
-        encoder_model_filename = '/home/youssef/mechatronics/perception_stack_ws/src/perception/perception/artifacts/mars-small128.pb'
+        encoder_model_filename = os.path.join(os.path.dirname(__file__), "artifacts/mars-small128.pb")
+
+
 
         metric = nn_matching.NearestNeighborDistanceMetric("cosine", max_cosine_distance, nn_budget)
         self.tracker = DeepSortTracker(metric)

@@ -1,0 +1,5 @@
+[console_scripts]
+cam_publisher = perception.camera_stream:main
+speed = perception.speed:main
+tracker = perception.tracking:main
+
