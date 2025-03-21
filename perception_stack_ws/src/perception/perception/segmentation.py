@@ -16,6 +16,8 @@ class segmentation(Node):
         self.subscription = self.create_subscription(
             Image,'/frames', self.process, 10)
         self.subscription 
+
+        self.publisher = self.create_publisher(Image, '/segment', 10)
         
         # self.video_path = "harder_challenge_video.mp4"
         # self.video_path = "challenge.mp4"
@@ -33,6 +35,10 @@ class segmentation(Node):
         annotated_frame = results[0].plot()
         
         cv2.imshow("Segmented Frame", annotated_frame)
+
+        msg = self.bridge.cv2_to_imgmsg(annotated_frame, encoding='bgr8')
+
+        self.publisher.publish(msg)
 
     # def process(self):
     #     success, frame = self.cap.read()
