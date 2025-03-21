@@ -4,7 +4,8 @@ import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
 from perception_interfaces.msg import TrackedObject
-from std_msgs.msg import Float32  # Import Float32 for publishing speed
+from std_msgs.msg import Float32
+from std_msgs.msg import String  # Add this import
 from cv_bridge import CvBridge
 import cv2
 import numpy as np
@@ -15,28 +16,43 @@ class OpticalFlowTracker(Node):
         super().__init__('optical_flow_tracker')
         self.bridge = CvBridge()
 
-        # Image Subscriber
         self.frame_subscriber = self.create_subscription(
             Image, '/frames', self.image_callback, 10
         )
 
-        # Tracked Object Subscriber
         self.tracked_objects_subscriber = self.create_subscription(
             TrackedObject, '/tracked_objects', self.tracked_object_callback, 10
         )
 
-        # Speed Publisher
         self.speed_publisher = self.create_publisher(Float32, '/estimated_speed', 10)
 
-        self.tracked_objects = {}  # Store objects with a history of positions
+        self.tracking_status = False
+        self.subscription = self.create_subscription(
+            String,
+            '/tracking_status',
+            self.tracking_status_callback,
+            10)
+        self.subscription
+
+        self.tracked_objects = {}
         self.previous_gray = None
         self.feature_params = dict(maxCorners=50, qualityLevel=0.2, minDistance=5, blockSize=5)
         self.lk_params = dict(winSize=(21, 21), maxLevel=3,
                               criteria=(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03))
 
-        self.meters_per_pixel = 0.01  # Example calibration factor (adjust based on your setup)
+        self.meters_per_pixel = 0.01
         
         self.get_logger().info("Optical Flow Tracker Node Started")
+
+        self.video_ended = False
+        self.output_video = None
+        self.display_window_name = "Optical Flow with Speed Estimation"
+
+    def tracking_status_callback(self, msg):
+        if msg.data == "ready":
+            self.tracking_status = True
+        else:
+            self.tracking_status = False
 
     def tracked_object_callback(self, msg):
         """Callback to store tracked object bounding boxes from the tracking system."""
@@ -45,11 +61,19 @@ class OpticalFlowTracker(Node):
             'history': [],
             'frames_since_seen': 0,
             'last_position': None,
-            'last_time': None
+            'last_time': None,
+            'class_name': msg.class_name
         }
         self.get_logger().info(f"Tracked object received: ID={msg.track_id}, Class={msg.class_name}, BBox={msg.bbox}")
 
     def image_callback(self, msg):
+        if not self.tracking_status:
+            self.get_logger().info('Tracking status not ready')
+            return
+
+        if self.video_ended:
+            return
+
         """Processes incoming image frames and computes optical flow."""
         try:
             frame = self.bridge.imgmsg_to_cv2(msg, "bgr8")
@@ -57,6 +81,8 @@ class OpticalFlowTracker(Node):
 
             if self.previous_gray is None:
                 self.previous_gray = gray
+                height, width, _ = frame.shape
+                self.output_video = cv2.VideoWriter('output_video.avi', cv2.VideoWriter_fourcc(*'XVID'), 30, (width, height))
                 return
 
             if not self.tracked_objects:
@@ -89,7 +115,7 @@ class OpticalFlowTracker(Node):
                     self.get_logger().warn("No good features found in ROI.")
                     continue
 
-                p0 += np.array([[x1, y1]])  # Adjust coordinates to full frame
+                p0 += np.array([[x1, y1]])
                 p1, st, err = cv2.calcOpticalFlowPyrLK(self.previous_gray, gray, p0, None, **self.lk_params)
 
                 if p1 is not None and st is not None:
@@ -99,30 +125,26 @@ class OpticalFlowTracker(Node):
                     obj_data['history'].append(good_new)
                     obj_data['frames_since_seen'] = 0
 
-                    # Speed estimation
                     if obj_data['last_position'] is not None and obj_data['last_time'] is not None:
                         displacement = np.linalg.norm(np.mean(good_new - obj_data['last_position'], axis=0))
                         time_diff = current_time - obj_data['last_time']
 
                         if time_diff > 0:
-                            speed_mps = (displacement * self.meters_per_pixel) / time_diff  # Speed in m/s
-                            speed_kph = speed_mps * 3.6  # Convert to km/h
+                            speed_mps = (displacement * self.meters_per_pixel) / time_diff 
+                            speed_kph = speed_mps * 3.6 
                             self.get_logger().info(f"Object {obj_id} speed: {speed_kph:.2f} km/h")
 
-                            # Publish speed value
                             speed_msg = Float32()
                             speed_msg.data = speed_kph
                             self.speed_publisher.publish(speed_msg)
 
-                            # Display speed on image
-                            speed_text = f"{speed_kph:.2f} km/h"
+                            class_name = obj_data.get('class_name', 'Unknown')
+                            speed_text = f"ID {obj_id}: {class_name}: {speed_kph:.2f} km/h"
                             cv2.putText(frame, speed_text, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
-                    # Update last position and time
                     obj_data['last_position'] = np.mean(good_new, axis=0)
                     obj_data['last_time'] = current_time
 
-                    # Draw bounding box and optical flow vectors
                     cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 0, 0), 2)
                     for new, old in zip(good_new, good_old):
                         a, b = new.ravel()
@@ -141,11 +163,18 @@ class OpticalFlowTracker(Node):
             self.tracked_objects = new_tracked_objects
             self.previous_gray = gray.copy()
 
-            cv2.imshow("Optical Flow with Speed Estimation", frame)
+            self.output_video.write(frame)
+
+            cv2.imshow(self.display_window_name, frame)
             cv2.waitKey(1)
         except Exception as e:
             self.get_logger().error(f"Error processing image frame: {e}")
 
+    def destroy_node(self):
+        if self.output_video:
+            self.output_video.release()
+        cv2.destroyWindow(self.display_window_name)
+        super().destroy_node()
 
 def main():
     rclpy.init()

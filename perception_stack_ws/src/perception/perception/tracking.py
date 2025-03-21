@@ -15,6 +15,7 @@ from rclpy.node import Node
 from cv_bridge import CvBridge
 from sensor_msgs.msg import Image
 from perception_interfaces.msg import TrackedObject
+from std_msgs.msg import String
 
 from ultralytics import YOLO
 
@@ -36,6 +37,11 @@ class ObjectTracker(Node):
         self._setup_cv_components()
         self._setup_visualization()
 
+        self.show_visualization = False  # Disable visualization
+
+        # Publish "ready" status
+        self._publish_status("ready")
+
         self.get_logger().info('Object Tracker Initialized')
     
     def _setup_ros_communication(self) -> None:
@@ -45,6 +51,9 @@ class ObjectTracker(Node):
         )
         self.publisher = self.create_publisher(
             TrackedObject, "/tracked_objects", 10
+        )
+        self.status_publisher = self.create_publisher(
+            String, "/tracking_status", 10
         )
         self.bridge = CvBridge()
     
@@ -192,6 +201,18 @@ class ObjectTracker(Node):
             )
         
         self.get_logger().info(f"Published {len(tracked_objects)} tracked objects")
+
+    def _publish_status(self, status: str) -> None:
+        """
+        Publish status to the /tracking_status topic.
+        
+        Args:
+            status: Status message to publish
+        """
+        status_msg = String()
+        status_msg.data = status
+        self.status_publisher.publish(status_msg)
+        self.get_logger().info(f"Published status: {status}")
 
 
 def main(args=None):

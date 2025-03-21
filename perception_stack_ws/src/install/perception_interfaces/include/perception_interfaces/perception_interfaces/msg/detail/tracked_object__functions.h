@@ -1,1 +1,0 @@
-/home/hunter/Robot_Perception_System/perception_stack_ws/src/build/perception_interfaces/rosidl_generator_c/perception_interfaces/msg/detail/tracked_object__functions.h

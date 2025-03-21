@@ -1,1 +1,0 @@
-/home/hunter/Robot_Perception_System/perception_stack_ws/src/build/perception_interfaces/ament_cmake_environment_hooks/local_setup.sh
