@@ -33,9 +33,6 @@ class segmentation(Node):
         annotated_frame = results[0].plot()
         
         cv2.imshow("Segmented Frame", annotated_frame)
-        cv2.waitKey(1)
-        cv2.destroyAllWindows()
-        super().destroy_node()
 
     # def process(self):
     #     success, frame = self.cap.read()
