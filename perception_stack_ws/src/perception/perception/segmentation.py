@@ -14,7 +14,7 @@ class segmentation(Node):
         self.model = YOLO("yolo11n-seg.pt")
 
         self.subscription = self.create_subscription(
-            Image,'/frames', self.listener_callback, 10)
+            Image,'/frames', self.process, 10)
         self.subscription 
         
         # self.video_path = "harder_challenge_video.mp4"
