@@ -3,4 +3,5 @@ perception_stack_ws/install
 perception_stack_ws/log
 .vscode/
 perception_stack_ws/src/.vscode
+perception_stack_ws/src/perception/perception/data
 **/__pycache__/
