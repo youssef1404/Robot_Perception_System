@@ -72,7 +72,7 @@ Ensure you have the following installed:
 | `optical_flow`    | Computes object motion vectors using Optical Flow.           |
 | `fusion_node`     | Aggregates data and publishes fused object information. |
 
-## Topics
+## Topics 
 
 | Topic                 | Message Type          | Description                                       |
 | :-------------------- | :-------------------- | :------------------------------------------------ |
